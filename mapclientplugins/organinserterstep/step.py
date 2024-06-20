@@ -74,29 +74,32 @@ class OrganInserterStep(WorkflowStepMountPoint):
         input_list = list(organ_file_dict.values())
         input_list.remove(organ_file_dict['whole body'])
         whole_body_model = organ_file_dict['whole body']
-        for i in input_list:
-            self._fitter = Fitter(whole_body_model, i)
-            self._fitter.load()
-            alig  = FitterStepAlign()
-            alig.setAlignMarkers(True)
-            alig.setAlignGroups(True)
-            self._fitter.addFitterStep(alig)
-
-            _currentFitterStep = FitterStepFit()
-            self._fitter.addFitterStep(_currentFitterStep)
-            _currentFitterStep.setGroupStrainPenalty(None, [0.001])
-            _currentFitterStep.setGroupCurvaturePenalty(None, [200.0])
-            _currentFitterStep.setGroupDataWeight(None, 1000.0)
-
-            self._output_filenames = []
-            fitterSteps = self._fitter.getFitterSteps()
-            print(fitterSteps)
-            self._fitter.run(endStep=None, modelFileNameStem=self._location)
-            self._fitter.writeModel(self._location + "/fitted.exf")
-            whole_body_model = self._location + "/fitted.exf"
+        # for i in input_list:
+        #     self._fitter = Fitter(whole_body_model, i)
+        #     self._fitter.load()
+        #     alig  = FitterStepAlign()
+        #     alig.setAlignMarkers(True)
+        #     alig.setAlignGroups(True)
+        #     self._fitter.addFitterStep(alig)
+        #
+        #     _currentFitterStep = FitterStepFit()
+        #     self._fitter.addFitterStep(_currentFitterStep)
+        #     _currentFitterStep.setGroupStrainPenalty(None, [0.001])
+        #     _currentFitterStep.setGroupCurvaturePenalty(None, [200.0])
+        #     _currentFitterStep.setGroupDataWeight(None, 1000.0)
+        #
+        #     self._output_filenames = []
+        #     fitterSteps = self._fitter.getFitterSteps()
+        #     print(fitterSteps)
+        #     self._fitter.run(endStep=None, modelFileNameStem=self._location)
+        #     self._fitter.writeModel(self._location + "/fitted.exf")
+        #     whole_body_model = self._location + "/fitted.exf"
         # self._organ_inserter = OrganInserter(whole_body_model, input_list,
         #                                      self._location)
-        self._port2_output_marker_data_file = self._location + "/fitted.exf"
+        self._organ_inserter = OrganInserter(whole_body_model, input_list,
+                                             self._location)
+        self._port2_output_marker_data_file = self._organ_inserter.get_output_file_name()
+        # self._port2_output_marker_data_file = self._location + "/fitted.exf"
         self._doneExecution()
 
     def get_output_file_name(self):

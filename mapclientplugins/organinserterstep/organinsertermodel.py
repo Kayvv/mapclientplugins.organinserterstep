@@ -188,6 +188,7 @@ class MarkerCoordinates(BaseOutputFile):
             self._set_model_coordinates_field(field)
 
     def get_marker_fields(self):
+        marker_group_names = []
         marker_name = False
         marker_location_name = False
         marker_group_name = False
@@ -195,7 +196,9 @@ class MarkerCoordinates(BaseOutputFile):
         field = field_iter.next()
         while field.isValid():
             field_name = field.getName()
-            if 'marker' in field_name.lower():
+            if 'marker' in field_name.lower() and '_' in field_name.lower():
+                marker_group_name = field_name
+                marker_group_names.append(marker_group_name)
                 if 'name' in field_name.lower():
                     marker_name = field_name
                 elif 'location' in field_name.lower():
@@ -203,8 +206,8 @@ class MarkerCoordinates(BaseOutputFile):
                 elif '.' not in field_name:
                     marker_group_name = field_name
             field = field_iter.next()
-        if all([marker_name, marker_location_name, marker_group_name]):
-            return marker_location_name, marker_name, marker_group_name
+        if all([marker_name, marker_location_name, marker_group_names]):
+            return marker_location_name, marker_name, marker_group_names
         else:
             raise AssertionError('Could not find marker fields')
 
@@ -231,11 +234,11 @@ class MarkerCoordinates(BaseOutputFile):
         field_cache = self._field_module.createFieldcache()
         nodes = self._field_module.findNodesetByFieldDomainType(Field.DOMAIN_TYPE_NODES)
 
-        marker_location_name, marker_name, marker_group_name = self.get_marker_fields()
+        marker_location_name, marker_name, marker_group_names = self.get_marker_fields()
 
         markerLocation = self._field_module.findFieldByName(marker_location_name)
         markerName = self._field_module.findFieldByName(marker_name)
-        markerGroup = self._field_module.findFieldByName(marker_group_name)
+        # markerGroup = self._field_module.findFieldByName(marker_group_name)
 
         self._marker_region = self._region.createRegion()
         marker_fieldmodule = self._marker_region.getFieldmodule()
@@ -252,30 +255,33 @@ class MarkerCoordinates(BaseOutputFile):
         markerTemplateInternal.defineField(marker_data_coordinates)
         markerTemplateInternal.setValueNumberOfVersions(marker_data_coordinates, -1, Node.VALUE_LABEL_VALUE, 1)
 
-        markerNodes = None
-        if markerGroup.isValid():
-            markerGroup = markerGroup.castGroup()
-            markerNodes = markerGroup.getNodesetGroup(nodes)
+        for marker_group_name in marker_group_names:
+            markerGroup = self._field_module.findFieldByName(marker_group_name)
+            markerNodes = None
+            if markerGroup.isValid():
+                markerGroup = markerGroup.castGroup()
+                markerNodes = markerGroup.getNodesetGroup(nodes)
 
-        if markerLocation.isValid() and markerName.isValid():
-            with ChangeManager(marker_fieldmodule):
-                marker_coordinates = self._field_module.createFieldEmbedded(self._model_coordinates_field,
-                                                                            markerLocation)
-                nodeIter = markerNodes.createNodeiterator()
-                node = nodeIter.next()
-                while node.isValid():
-                    marker_node = temp_nodes.createNode(node.getIdentifier(), markerTemplateInternal)
-                    marker_data_nodesGroup.addNode(marker_node)
-
-                    marker_fieldCache.setNode(marker_node)
-                    field_cache.setNode(node)
-                    result, x = marker_coordinates.evaluateReal(field_cache, 3)
-                    result = marker_data_coordinates.setNodeParameters(marker_fieldCache, -1, Node.VALUE_LABEL_VALUE, 1, x)
-                    if result == RESULT_OK:
-                        name = markerName.evaluateString(field_cache)
-                        if name:
-                            marker_data_name.assignString(marker_fieldCache, name)
+            if markerLocation.isValid() and markerName.isValid():
+                with ChangeManager(marker_fieldmodule):
+                    marker_coordinates = self._field_module.createFieldEmbedded(self._model_coordinates_field,
+                                                                                markerLocation)
+                    nodeIter = markerNodes.createNodeiterator()
                     node = nodeIter.next()
+                    while node.isValid():
+                        marker_node = temp_nodes.createNode(node.getIdentifier(), markerTemplateInternal)
+                        marker_data_nodesGroup.addNode(marker_node)
+
+                        marker_fieldCache.setNode(marker_node)
+                        field_cache.setNode(node)
+                        result, x = marker_coordinates.evaluateReal(field_cache, 3)
+                        result = marker_data_coordinates.setNodeParameters(marker_fieldCache, -1,
+                                                                           Node.VALUE_LABEL_VALUE, 1, x)
+                        if result == RESULT_OK:
+                            name = markerName.evaluateString(field_cache)
+                            if name:
+                                marker_data_name.assignString(marker_fieldCache, name)
+                        node = nodeIter.next()
 
     def _set_model_coordinates_field(self, model_coordinates_field: Field):
         finite_element_field = model_coordinates_field.castFiniteElement()

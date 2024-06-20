@@ -9,7 +9,8 @@ from mapclientplugins.organinserterstep.ui_organinserterwidget import Ui_OrganIn
 class OrganInserterWidget(QtWidgets.QWidget):
     def __init__(self, input_model_file, input_data_files, output_directory, parent=None):
         super(OrganInserterWidget, self).__init__(parent)
-
+        if input_model_file:
+            input_data_files.append(input_model_file)
         self._input_data_files = input_data_files
         # organ_transformer = OrganTransformer(input_data_files, marker_coordinates.output_filename(), output_directory)
         # self._output_filename = organ_transformer.output_filename()
